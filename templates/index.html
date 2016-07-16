@@ -1,0 +1,113 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var ws = new WebSocket("ws://localhost:777/game");
+            var turn = false;
+
+            $('#info').html('Wait your turn.');
+            $('#score').html("Black: 0  White: 0")
+
+            ws.onmessage = function (evt) {
+                var msg = JSON.parse(evt.data);
+                if (msg.action == 'put') {
+                    $('#' + msg.x + '_' + msg.y).addClass(msg.color);
+                } else if (msg.action == 'turn') {
+                    turn = true;
+                    $('#info').html('Your turn');
+                } else if (msg.action == 'remove') {
+                    $('#' + msg.x + '_' + msg.y).removeClass("black white");
+                } else if (msg.action == 'nope') {
+                    $('#info').html('<span>Nope</span>');
+                    turn = true;
+                }
+
+                if (msg.action == 'score') {
+                    var black = msg.score['black']
+                    var white = msg.score['white']
+                    var score = "Black: " + black + ' ' + 'White: ' + white
+                    $('#score').html(score)
+                }
+
+                if (msg.action == 'completed') {
+                    $('#info').html('<span>The game is over!</span>')
+                    ws.close()
+                }
+
+            };
+
+            function put_stone(x, y) {
+                return function () {
+                    if (turn) {
+                        ws.send(x + '_' + y);
+                        turn = false;
+                        $('#info').html('Wait your turn.');
+                    }
+                }
+            }
+
+            _.map(_.range(81), function (t) {
+                var px = t % 9;
+                var py = Math.floor(t / 9);
+                var point = document.createElement('div');
+                $('#board').append(point);
+                $(point).addClass('point');
+                $(point).attr({
+                                  id: px + '_' + py,
+                                  x: px,
+                                  y: py
+                              });
+                $(point).click(put_stone(px, py));
+            });
+        });
+    </script>
+    <style>
+        body {
+            background-color: #f1f1f1;
+        }
+
+        #info, #score {
+            margin: auto;
+            width: 150px;
+            padding: 20px
+        }
+
+        #board {
+            background: url("../static/board.png") no-repeat;
+            background-size: contain;
+            width: 315px;
+            height: 315px;
+            margin: auto;
+        }
+
+        .point {
+            height: 35px;
+            width: 35px;
+            float: left;
+        }
+
+        .white {
+            background: url("../static/white.png") no-repeat;
+            background-size: contain;
+        }
+
+        .black {
+            background: url("../static/black.png") no-repeat;
+            background-size: contain;
+        }
+
+        span {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+<div id="info"></div>
+<div id="board"></div>
+<div id="score"></div>
+</body>
+</html>
